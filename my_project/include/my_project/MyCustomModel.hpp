@@ -15,15 +15,16 @@ class MyCustomModel : public Model {
     public:
 
     // States of the Model
-    enum States {X, Y};
+    enum States {X, Y, Z};
 
     // Controls of the Model
-    enum Controls {dXdt, dYdt};
+    enum Controls {dXdt, dYdt, dZdt};
 
     // Constructor
     MyCustomModel() {
         x_bounds_ = {-std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
         y_bounds_ = {-std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
+        z_bounds_ = {0, std::numeric_limits<float>::infinity()};
         goal_threshold_ = 0.25f;
     }
 
@@ -38,6 +39,7 @@ class MyCustomModel : public Model {
        State next_state = state;
        next_state[X] += control[dXdt] * time_span;
        next_state[Y] += control[dYdt] * time_span;
+       next_state[Z] += control[dZdt] * time_span;
        return next_state;
 
     }
@@ -51,7 +53,10 @@ class MyCustomModel : public Model {
             i.e Distance, Time, Energy
         */
 
-        return sqrtf(control[dXdt]*control[dXdt] + control[dYdt]*control[dYdt])*time_span;
+        const float dX = state2[X] - state1[X];
+        const float dY = state2[Y] - state1[Y];
+        const float dZ = state2[Z] - state1[Z];
+        return sqrtf(dX*dX + dY*dY + dZ*dZ) + (state1[Z] + 0.5F*dZ)*time_span;
     }
 
     // Get the heuristic of a state
@@ -65,7 +70,8 @@ class MyCustomModel : public Model {
 
         const float dX = goal[X] - state[X];
         const float dY = goal[Y] - state[Y];
-        return sqrtf(dX*dX + dY*dY);
+        const float dZ = goal[Z] - state[Z];
+        return sqrtf(dX*dX + dY*dY + dZ*dZ);
     }
 
     // Determine if node is valid
@@ -76,10 +82,12 @@ class MyCustomModel : public Model {
             i.e Boundary constraints, Obstacles, State limits
         */
 
-        return state[X] > x_bounds_[0] &&
+        return state[X] >= x_bounds_[0] &&
                state[X] < x_bounds_[1] &&
-               state[Y] > y_bounds_[0] &&
-               state[Y] < y_bounds_[1];
+               state[Y] >= y_bounds_[0] &&
+               state[Y] < y_bounds_[1] &&
+               state[Z] >= z_bounds_[0] &&
+               state[Z] < z_bounds_[1];
     }
 
     // Determine if state is goal
@@ -96,9 +104,10 @@ class MyCustomModel : public Model {
     ~MyCustomModel() {}
 
     /// @brief Set the map bounds of the plan
-    void set_bounds(float min_x, float max_x, float min_y, float max_y) {
+    void set_bounds(float min_x, float max_x, float min_y, float max_y, float min_z, float max_z) {
         x_bounds_ = {min_x, max_x};
         y_bounds_ = {min_y, max_y};
+        z_bounds_ = {min_z, max_z};
     }
 
     /// @brief Set the goal threshold
@@ -110,6 +119,7 @@ class MyCustomModel : public Model {
 
     std::array<float, 2> x_bounds_;
     std::array<float, 2> y_bounds_;
+    std::array<float, 2> z_bounds_;
     float goal_threshold_;
 
 
