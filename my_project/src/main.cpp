@@ -1,49 +1,32 @@
 #include <sbmpo/SBMPO.hpp>
+#include <sbmpo/benchmarks/Benchmark.hpp>
 #include <my_project/MyCustomModel.hpp>
 #include <sbmpo/tools/PrintTool.hpp>
+#include <sbmpo/tools/CSVTool.hpp>
 
 using namespace my_namespace;
 
 int main(int argc, char ** argv) {
-
-  sbmpo::SearchParameters params;
-  /* Add in parameters here */
-  params.max_iterations = 500000;
-  params.max_generations = 1000;
-  params.start_state = {1, 8, 0};
-  params.goal_state = {15, 8, 0};
-  params.sample_time = 0.10f;
-  params.grid_resolution = {0.10f, 0.10f, 0.10f};
-  params.samples = {
-    {1, 0, 0}, {1, 1, 0}, {0, 1, 0}, {-1, 1, 0},
-    {-1, 0, 0}, {-1, -1, 0}, {0, -1, 0}, {1, -1, 0},
-    {1, 0, 1}, {1, 1, 1}, {0, 1, 1}, {-1, 1, 1},
-    {-1, 0, 1}, {-1, -1, 1}, {0, -1, 1}, {1, -1, 1},
-  };
   
-  sbmpo::SBMPO<MyCustomModel> planner;
-
   Occupancy3D occupancy = Occupancy3D::fromFile("/sbmpo_ws/occupancy.csv");
-  planner.model()->setOccupancy3D(occupancy);
+  sbmpo_benchmarks::Benchmark<MyCustomModel> benchmark("/sbmpo_ws/my_project/csv/");
 
-  for (float x = 0; x < 20; x += 0.2)
+  benchmark.model()->setOccupancy3D(occupancy);
+  benchmark.set_verbose(true);
+
+  for (float xi = 0.0; xi < 20.0; xi += 0.25)
   {
-    for (float y = 0; y < 20; y += 0.2)
+    for (float yi = 0.0; yi < 20.0; yi += 0.25)
     {
-      bool occ = occupancy.getOccupancy(x, y, 0);
-      if (occ)
+      bool occval = occupancy.getOccupancy(xi, yi, 0.5);
+      if (occval)
       {
-        printf("(%.1f,%.1f) = %d", x, y, occ);
-        printf("\n");
+        printf("(X: %.2f, Y: %.2f) is occupied\n", xi, yi);
       }
     }
   }
 
-  planner.run(params);
-
-  sbmpo_io::print_parameters(params);
-  sbmpo_io::print_results(planner.results());
-  sbmpo_io::print_stats(planner.results());
+  benchmark.benchmark();
 
   return 0;
 }

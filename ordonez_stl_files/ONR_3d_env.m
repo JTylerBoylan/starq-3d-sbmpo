@@ -101,10 +101,11 @@ vertices_wood = wood.Points;
 faces_wood = wood.ConnectivityList;
 
 % Define a scaling factor to make the object smaller (e.g., 0.1 for 10% of original size)
-scalingFactor = 0.007;
+% scalingFactor = 0.007;
+scalingFactor = 0.01;
 
 % Apply scaling to the vertices
-scaledVertices_wood = [10 5 0.2] + scalingFactor * vertices_wood;
+scaledVertices_wood = [10 5 -0.2] + scalingFactor * vertices_wood;
 
 hold on
 % Create a patch from the scaled vertices and original faces
@@ -173,7 +174,7 @@ yMin = 0; yMax = 20;
 zMin = 0; zMax = 5;
 min_coords = [xMin, yMin, zMin]; % Minimum coordinates
 max_coords = [xMax, yMax, zMax]; % Maximum coordinates
-resolution = 0.2; % Resolution (adjust as needed)
+resolution = 0.5; % Resolution (adjust as needed)
 
 % Create the 3D grid
 x = min_coords(1):resolution:max_coords(1);

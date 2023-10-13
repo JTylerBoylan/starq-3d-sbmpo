@@ -38,7 +38,7 @@ namespace my_namespace
         {
             x_bounds_ = {0, 20};
             y_bounds_ = {0, 20};
-            z_bounds_ = {0, 5};
+            z_bounds_ = {-0.01, 5};
             goal_threshold_ = 0.25f;
         }
 
