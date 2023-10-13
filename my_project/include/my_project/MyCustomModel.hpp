@@ -4,126 +4,153 @@
 #include <sbmpo/types/types.hpp>
 #include <sbmpo/types/Model.hpp>
 
+#include <my_project/Occupancy3D.hpp>
+
 #include <math.h>
 
-namespace my_namespace {
+namespace my_namespace
+{
 
-using namespace sbmpo;
+    using namespace sbmpo;
 
-class MyCustomModel : public Model {
+    class MyCustomModel : public Model
+    {
 
     public:
+        // States of the Model
+        enum States
+        {
+            X,
+            Y,
+            Z
+        };
 
-    // States of the Model
-    enum States {X, Y, Z};
+        // Controls of the Model
+        enum Controls
+        {
+            dXdt,
+            dYdt,
+            dZdt
+        };
 
-    // Controls of the Model
-    enum Controls {dXdt, dYdt, dZdt};
+        // Constructor
+        MyCustomModel()
+        {
+            x_bounds_ = {0, 20};
+            y_bounds_ = {0, 20};
+            z_bounds_ = {0, 5};
+            goal_threshold_ = 0.25f;
+        }
 
-    // Constructor
-    MyCustomModel() {
-        x_bounds_ = {-std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
-        y_bounds_ = {-std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()};
-        z_bounds_ = {0, std::numeric_limits<float>::infinity()};
-        goal_threshold_ = 0.25f;
-    }
+        // Evaluate a node with a control
+        State next_state(const State &state, const Control &control, const float time_span) override
+        {
 
-    // Evaluate a node with a control
-    State next_state(const State &state, const Control& control, const float time_span) override {
+            /*
+                Dynamics of the system
+                How does each state change with respect to the controls?
+            */
 
-        /*
-            Dynamics of the system
-            How does each state change with respect to the controls?
-        */
+            State next_state = state;
+            next_state[X] += control[dXdt] * time_span;
+            next_state[Y] += control[dYdt] * time_span;
+            next_state[Z] += control[dZdt] * time_span;
+            return next_state;
+        }
 
-       State next_state = state;
-       next_state[X] += control[dXdt] * time_span;
-       next_state[Y] += control[dYdt] * time_span;
-       next_state[Z] += control[dZdt] * time_span;
-       return next_state;
+        // Get the cost of a control
+        float cost(const State &state1, const State &state2, const Control &control, const float time_span) override
+        {
 
-    }
+            /*
+                Cost of a state and control
+                What am I trying to minimize?
+                i.e Distance, Time, Energy
+            */
 
-    // Get the cost of a control
-    float cost(const State& state1, const State& state2, const Control& control, const float time_span) override {
+            const float dX = state2[X] - state1[X];
+            const float dY = state2[Y] - state1[Y];
+            const float dZ = state2[Z] - state1[Z];
+            return sqrtf(dX * dX + dY * dY + dZ * dZ) + (state1[Z] + 0.5F * dZ) * time_span;
+        }
 
-        /*
-            Cost of a state and control
-            What am I trying to minimize?
-            i.e Distance, Time, Energy
-        */
+        // Get the heuristic of a state
+        float heuristic(const State &state, const State &goal) override
+        {
 
-        const float dX = state2[X] - state1[X];
-        const float dY = state2[Y] - state1[Y];
-        const float dZ = state2[Z] - state1[Z];
-        return sqrtf(dX*dX + dY*dY + dZ*dZ) + (state1[Z] + 0.5F*dZ)*time_span;
-    }
+            /*
+                Heuristic of a state with respect to the goal
+                Leads the planner to the goal
+                What is the lowest cost possible from this state to the goal?
+            */
 
-    // Get the heuristic of a state
-    float heuristic(const State& state, const State& goal) override {
+            const float dX = goal[X] - state[X];
+            const float dY = goal[Y] - state[Y];
+            const float dZ = goal[Z] - state[Z];
+            return sqrtf(dX * dX + dY * dY + dZ * dZ);
+        }
 
-        /*
-            Heuristic of a state with respect to the goal
-            Leads the planner to the goal
-            What is the lowest cost possible from this state to the goal?
-        */
+        // Determine if node is valid
+        bool is_valid(const State &state) override
+        {
 
-        const float dX = goal[X] - state[X];
-        const float dY = goal[Y] - state[Y];
-        const float dZ = goal[Z] - state[Z];
-        return sqrtf(dX*dX + dY*dY + dZ*dZ);
-    }
+            /*
+                Does this state meet the model constraints?
+                i.e Boundary constraints, Obstacles, State limits
+            */
 
-    // Determine if node is valid
-    bool is_valid(const State& state) override {
+            bool occupied = occupancy_.getOccupancy(state[X], state[Y], state[Z]);
 
-        /*
-            Does this state meet the model constraints?
-            i.e Boundary constraints, Obstacles, State limits
-        */
+            return !occupied &&
+                   state[X] >= x_bounds_[0] &&
+                   state[X] < x_bounds_[1] &&
+                   state[Y] >= y_bounds_[0] &&
+                   state[Y] < y_bounds_[1] &&
+                   state[Z] >= z_bounds_[0] &&
+                   state[Z] < z_bounds_[1];
+        }
 
-        return state[X] >= x_bounds_[0] &&
-               state[X] < x_bounds_[1] &&
-               state[Y] >= y_bounds_[0] &&
-               state[Y] < y_bounds_[1] &&
-               state[Z] >= z_bounds_[0] &&
-               state[Z] < z_bounds_[1];
-    }
+        // Determine if state is goal
+        bool is_goal(const State &state, const State &goal) override
+        {
 
-    // Determine if state is goal
-    bool is_goal(const State& state, const State& goal) override {
+            /*
+                Is this state close enough to the goal to end the plan?
+            */
 
-        /*
-            Is this state close enough to the goal to end the plan?
-        */
-       
-        return this->heuristic(state, goal) <= goal_threshold_;
-    }
+            return this->heuristic(state, goal) <= goal_threshold_;
+        }
 
-    // Deconstructor
-    ~MyCustomModel() {}
+        void setOccupancy3D(Occupancy3D &occupancy)
+        {
+            occupancy_ = occupancy;
+        }
 
-    /// @brief Set the map bounds of the plan
-    void set_bounds(float min_x, float max_x, float min_y, float max_y, float min_z, float max_z) {
-        x_bounds_ = {min_x, max_x};
-        y_bounds_ = {min_y, max_y};
-        z_bounds_ = {min_z, max_z};
-    }
+        // Deconstructor
+        ~MyCustomModel() {}
 
-    /// @brief Set the goal threshold
-    void set_goal_threshold(float goal_threshold) {
-        goal_threshold_ = goal_threshold;
-    }
+        /// @brief Set the map bounds of the plan
+        void set_bounds(float min_x, float max_x, float min_y, float max_y, float min_z, float max_z)
+        {
+            x_bounds_ = {min_x, max_x};
+            y_bounds_ = {min_y, max_y};
+            z_bounds_ = {min_z, max_z};
+        }
+
+        /// @brief Set the goal threshold
+        void set_goal_threshold(float goal_threshold)
+        {
+            goal_threshold_ = goal_threshold;
+        }
 
     protected:
+        Occupancy3D occupancy_;
 
-    std::array<float, 2> x_bounds_;
-    std::array<float, 2> y_bounds_;
-    std::array<float, 2> z_bounds_;
-    float goal_threshold_;
-
-
-};
+        std::array<float, 2> x_bounds_;
+        std::array<float, 2> y_bounds_;
+        std::array<float, 2> z_bounds_;
+        float goal_threshold_;
+    };
 
 }
 
