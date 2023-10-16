@@ -1,9 +1,9 @@
 
-out_file = '../occupancy.csv';
+out_file = '../sdf.csv';
 
-x_size = size(occupancy_grid, 1);
-y_size = size(occupancy_grid, 2);
-z_size = size(occupancy_grid, 3);
+x_size = size(SDF, 1);
+y_size = size(SDF, 2);
+z_size = size(SDF, 3);
 size_arr = [x_size, y_size, z_size];
 
 x_res = resolution;
@@ -16,8 +16,7 @@ writematrix(res_arr, out_file, 'WriteMode', 'append');
 
 for zi = 1:z_size
 
-    layer = occupancy_grid(:,:,zi);
-    layer = layer;
+    layer = SDF(:,:,zi);
 
     writematrix(layer, out_file, 'WriteMode', 'append');
 end

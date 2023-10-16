@@ -4,7 +4,7 @@
 #include <sbmpo/types/types.hpp>
 #include <sbmpo/types/Model.hpp>
 
-#include <my_project/Occupancy3D.hpp>
+#include <my_project/SDF3D.hpp>
 
 #include <math.h>
 
@@ -71,7 +71,7 @@ namespace my_namespace
             const float dX = state2[X] - state1[X];
             const float dY = state2[Y] - state1[Y];
             const float dZ = state2[Z] - state1[Z];
-            return sqrtf(dX * dX + dY * dY + dZ * dZ) + (state1[Z] + 0.5F * dZ) * time_span;
+            return sqrtf(dX * dX + dY * dY + dZ * dZ) + 0.1F * (state1[Z] + 0.5F * dZ) * time_span;
         }
 
         // Get the heuristic of a state
@@ -99,9 +99,9 @@ namespace my_namespace
                 i.e Boundary constraints, Obstacles, State limits
             */
 
-            bool occupied = occupancy_.getOccupancy(state[X], state[Y], state[Z]);
+            float distance = sdf_.getDistance(state[X], state[Y], state[Z]);
 
-            return !occupied &&
+            return distance >= min_distance_ &&
                    state[X] >= x_bounds_[0] &&
                    state[X] < x_bounds_[1] &&
                    state[Y] >= y_bounds_[0] &&
@@ -121,9 +121,9 @@ namespace my_namespace
             return this->heuristic(state, goal) <= goal_threshold_;
         }
 
-        void setOccupancy3D(Occupancy3D &occupancy)
+        void setSDF3D(SDF3D &sdf)
         {
-            occupancy_ = occupancy;
+            sdf_ = sdf;
         }
 
         // Deconstructor
@@ -143,13 +143,20 @@ namespace my_namespace
             goal_threshold_ = goal_threshold;
         }
 
+        void set_min_distance(const float min_distance)
+        {
+            min_distance_ = min_distance;
+        }
+
     protected:
-        Occupancy3D occupancy_;
+        SDF3D sdf_;
 
         std::array<float, 2> x_bounds_;
         std::array<float, 2> y_bounds_;
         std::array<float, 2> z_bounds_;
         float goal_threshold_;
+
+        float min_distance_;
     };
 
 }
