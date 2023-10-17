@@ -53,7 +53,7 @@ for n = 1:paths.path_size
     py(n) = node.state(2);
     pz(n) = node.state(3);
 end
-plot3(px, py, pz, '--g', 'LineWidth', 2.5)
+% plot3(px, py, pz, '--g', 'LineWidth', 2.5)
 % plot3(px, py, pz, 'ob', 'MarkerSize', 5)
 
 % calculate robot orientation
@@ -75,6 +75,7 @@ robot_plt = drawRobot([], robot, 0, 0, z_off, 0, 0, 0);
 
 % animate
 tic
+plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
 for k = 2:paths.path_size
     x_k = px(k);
     y_k = py(k);
@@ -83,6 +84,7 @@ for k = 2:paths.path_size
     pitch_k = ppitch(k-1);
     yaw_k = pyaw(k-1);
     robot_plt = drawRobot(robot_plt, robot, x_k, y_k, z_k, roll_k, pitch_k, yaw_k);
+    set(plt_line, 'xdata', px(1:k), 'ydata', py(1:k), 'zdata', pz(1:k))
     pause(t(k) - toc);
 end
 
