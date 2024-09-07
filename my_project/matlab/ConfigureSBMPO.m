@@ -8,20 +8,13 @@ params = struct;
 params.max_iterations = 500000;
 params.max_generations = 1000;
 params.horizon_time = 0.10;
-params.num_states = 3;
-params.num_controls = 3;
-params.grid_resolution = [0.10; 0.10; 0.10];
-params.start_state = [1; 8; 0];
-params.goal_state = [15; 8; 0];
-params.branchout_factor = 24;
-params.branchouts = [
-    [1; 0; 0], [1; 1; 0], [0; 1; 0], [-1; 1; 0], ...
-    [-1; 0; 0], [-1; -1; 0], [0; -1; 0], [1; -1; 0], ...
-    [1; 0; 1], [1; 1; 1], [0; 1; 1], [-1; 1; 1], ...
-    [-1; 0; 1], [-1; -1; 1], [0; -1; 1], [1; -1; 1], ...
-    [1; 0; -1], [1; 1; -1], [0; 1; -1], [-1; 1; -1], ...
-    [-1; 0; -1], [-1; -1; -1], [0; -1; -1], [1; -1; -1]
-    ];
+params.num_states = 4;
+params.num_controls = 4;
+params.grid_resolution = [0.10; 0.10; 0.10; 1.0];
+params.start_state = [1; 8; 0; 0];
+params.goal_state = [15; 8; 0; 0];
+params.branchout_factor = 0;
+params.branchouts = [];
 
 
 %% Write config file

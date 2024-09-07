@@ -196,20 +196,20 @@ function plt = drawRobot(plt, robot, x, y, z, roll, pitch, yaw)
 translation = [x; y; z];
 
 rotation_x = [1, 0, 0;
-              0, cos(pitch), sin(pitch);
-              0, -sin(pitch), cos(pitch)];
-rotation_y = [cos(yaw), 0, -sin(yaw);
+              0, cos(roll), -sin(roll);
+              0, sin(roll), cos(roll)];
+rotation_y = [cos(pitch), 0, -sin(pitch);
               0, 1, 0;
-              sin(yaw), 0, cos(yaw)];
-rotation_z = [cos(roll), -sin(roll), 0;
-              sin(roll), cos(roll), 0;
+              sin(pitch), 0, cos(pitch)];
+rotation_z = [cos(yaw), -sin(yaw), 0;
+              sin(yaw), cos(yaw), 0;
               0, 0, 1];
 
 rotation_off = [0, 0, 1;
                 1, 0, 0;
                 0, 1, 0];
 
-rotation = rotation_off * rotation_x * rotation_y * rotation_z;
+rotation = rotation_off * rotation_z * rotation_y * rotation_x;
 
 vertices_robot = robot.Points;
 faces_robot = robot.ConnectivityList;
