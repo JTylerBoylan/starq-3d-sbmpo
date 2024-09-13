@@ -8,6 +8,19 @@
 
 #include <math.h>
 
+#define OBSTACLE_MIN_DISTANCE 0.25F
+#define GOAL_THRESHOLD 0.25F
+
+#define COST_OF_TRANSPORT_WALK 10.0F
+#define COST_OF_TRANSPORT_SWIM 100.0F
+#define COST_TO_JUMP 100.0F
+
+#define VELOCITY_WALK 0.05F
+#define VELOCITY_WALK_DIAGONAL (VELOCITY_WALK * M_SQRT2 / 2.0)
+#define VELOCITY_SWIM 0.1F
+#define VELOCITY_SWIM_DIAGONAL (VELOCITY_SWIM * M_SQRT2 / 2.0)
+#define JUMP_HEIGHT 0.25F
+
 namespace my_namespace
 {
 
@@ -32,24 +45,20 @@ namespace my_namespace
             dXdt,
             dYdt,
             dZdt,
-            SwitchGait
+            ControlGait
         };
 
         enum Gaits
         {
             Walk,
-            Swim
+            Swim,
+            Jump,
+            Sink
         };
 
         // Constructor
         MyCustomModel()
         {
-            x_bounds_ = {0, 20};
-            y_bounds_ = {0, 20};
-            z_bounds_ = {-0.01, 5};
-            goal_threshold_ = 0.25f;
-            cost_gait_switch_ = 0.0f;
-            cost_swim_ = 1.1f;
         }
 
         // Evaluate a node with a control
@@ -60,11 +69,28 @@ namespace my_namespace
                 How does each state change with respect to the controls?
             */
 
+           const uint8_t gait = static_cast<uint8_t>(control[ControlGait]);
+
             State next_state = state;
-            next_state[X] += control[dXdt] * time_span;
-            next_state[Y] += control[dYdt] * time_span;
-            next_state[Z] += control[dZdt] * time_span;
-            next_state[Gait] = control[SwitchGait];
+            if (gait == Gaits::Jump)
+            {
+                next_state[Z] += JUMP_HEIGHT;
+                next_state[Gait] = static_cast<float>(Gaits::Swim);
+                return next_state;
+            }
+            else if (gait == Gaits::Sink)
+            {
+                next_state[Z] = 0.0;
+                next_state[Gait] = static_cast<float>(Gaits::Walk);
+                return next_state;
+            }
+            else
+            {
+                next_state[X] += control[dXdt] * time_span;
+                next_state[Y] += control[dYdt] * time_span;
+                next_state[Z] += control[dZdt] * time_span;
+                next_state[Gait] = control[ControlGait];
+            }
             return next_state;
         }
 
@@ -77,12 +103,37 @@ namespace my_namespace
                 i.e Distance, Time, Energy
             */
 
+            return distance_cost(state1, state2, control, time_span);
+            // return energy_cost(state1, state2, control, time_span);
+        }
+
+        // Get the cost of a control
+        float distance_cost(const State &state1, const State &state2, const Control &control, const float time_span)
+        {
+            const uint8_t gait = static_cast<uint8_t>(control[ControlGait]);
+            const float swim_factor = gait == Gaits::Swim ? 1.01 : 1.0;
+            
             const float dX = state2[X] - state1[X];
             const float dY = state2[Y] - state1[Y];
             const float dZ = state2[Z] - state1[Z];
-            const float dG = state2[Gait] != state1[Gait] ? cost_gait_switch_ : 0.0F;
-            const float swim_cost = state2[Gait] == static_cast<float>(Gaits::Swim) ? cost_swim_ : 1.0F;
-            return swim_cost * sqrtf(dX * dX + dY * dY + dZ * dZ) + dG;
+            return swim_factor * sqrtf(dX * dX + dY * dY + dZ * dZ);
+        }
+
+        // Get the cost of a control
+        float energy_cost(const State &state1, const State &state2, const Control &control, const float time_span)
+        {
+            const uint8_t gait = static_cast<uint8_t>(control[ControlGait]);
+            switch (gait)
+            {
+            case Gaits::Walk:
+                return COST_OF_TRANSPORT_WALK * time_span;
+            case Gaits::Swim:
+                return COST_OF_TRANSPORT_SWIM * time_span;
+            case Gaits::Jump:
+                return COST_TO_JUMP;
+            }
+
+            return 0.0;
         }
 
         // Get the heuristic of a state
@@ -110,13 +161,8 @@ namespace my_namespace
 
             float distance = sdf_.getDistance(state[X], state[Y], state[Z]);
 
-            return distance >= min_distance_ &&
-                   state[X] >= x_bounds_[0] &&
-                   state[X] < x_bounds_[1] &&
-                   state[Y] >= y_bounds_[0] &&
-                   state[Y] < y_bounds_[1] &&
-                   state[Z] >= z_bounds_[0] &&
-                   state[Z] < z_bounds_[1];
+            return distance >= OBSTACLE_MIN_DISTANCE &&
+                   state[Z] >= 0.0;
         }
 
         // Determine if state is goal
@@ -126,7 +172,7 @@ namespace my_namespace
                 Is this state close enough to the goal to end the plan?
             */
 
-            return this->heuristic(state, goal) <= goal_threshold_;
+            return this->heuristic(state, goal) <= GOAL_THRESHOLD;
         }
 
         std::vector<Control> getControlSamples(const State &state)
@@ -137,51 +183,26 @@ namespace my_namespace
             case Gaits::Walk:
             {
                 const float walk = state[Gait];
-                return {{1.0, 0.0, 0.0, walk},
-                        {1.0, 1.0, 0.0, walk},
-                        {0.0, 1.0, 0.0, walk},
-                        {-1.0, 1.0, 0.0, walk},
-                        {-1.0, 0.0, 0.0, walk},
-                        {-1.0, -1.0, 0.0, walk},
-                        {0.0, -1.0, 0.0, walk},
-                        {1.0, -1.0, 0.0, walk},
-                        {0.0, 0.0, 0.0, static_cast<float>(Gaits::Swim)}};
+                return {{VELOCITY_WALK, 0.0, 0.0, walk},
+                        {VELOCITY_WALK_DIAGONAL, VELOCITY_WALK_DIAGONAL, 0.0, walk},
+                        {0.0, VELOCITY_WALK, 0.0, walk},
+                        {-VELOCITY_WALK_DIAGONAL, VELOCITY_WALK_DIAGONAL, 0.0, walk},
+                        {-VELOCITY_WALK, 0.0, 0.0, walk},
+                        {-VELOCITY_WALK_DIAGONAL, -VELOCITY_WALK_DIAGONAL, 0.0, walk},
+                        {0.0, -VELOCITY_WALK, 0.0, walk},
+                        {VELOCITY_WALK_DIAGONAL, -VELOCITY_WALK_DIAGONAL, 0.0, walk},
+                        {0.0, 0.0, 0.0, static_cast<float>(Gaits::Jump)}};
             }
             case Gaits::Swim:
             {
                 const float swim = state[Gait];
-                std::vector<Control> controls =
-                    {{1.0, 0.0, 0.0, swim},
-                     {1.0, 1.0, 0.0, swim},
-                     {0.0, 1.0, 0.0, swim},
-                     {-1.0, 1.0, 0.0, swim},
-                     {-1.0, 0.0, 0.0, swim},
-                     {-1.0, -1.0, 0.0, swim},
-                     {0.0, -1.0, 0.0, swim},
-                     {1.0, -1.0, 0.0, swim},
-                     {1.0, 0.0, 1.0, swim},
-                     {1.0, 1.0, 1.0, swim},
-                     {0.0, 1.0, 1.0, swim},
-                     {-1.0, 1.0, 1.0, swim},
-                     {-1.0, 0.0, 1.0, swim},
-                     {-1.0, -1.0, 1.0, swim},
-                     {0.0, -1.0, 1.0, swim},
-                     {1.0, -1.0, 1.0, swim},
-                     {1.0, 0.0, -1.0, swim},
-                     {1.0, 1.0, -1.0, swim},
-                     {0.0, 1.0, -1.0, swim},
-                     {-1.0, 1.0, -1.0, swim},
-                     {-1.0, 0.0, -1.0, swim},
-                     {-1.0, -1.0, -1.0, swim},
-                     {0.0, -1.0, -1.0, swim},
-                     {1.0, -1.0, -1.0, swim}};
-
-                if (state[Z] <= 0.1)
-                {
-                    controls.push_back({0.0, 0.0, 0.0, static_cast<float>(Gaits::Walk)});
-                }
-
-                return controls;
+                return {{VELOCITY_SWIM, 0.0, 0.0, swim},
+                        {-VELOCITY_SWIM, 0.0, 0.0, swim},
+                        {VELOCITY_SWIM_DIAGONAL, 0.0, VELOCITY_SWIM_DIAGONAL, swim},
+                        {-VELOCITY_SWIM_DIAGONAL, 0.0, VELOCITY_SWIM_DIAGONAL, swim},
+                        {VELOCITY_SWIM_DIAGONAL, 0.0, -VELOCITY_SWIM_DIAGONAL, swim},
+                        {-VELOCITY_SWIM_DIAGONAL, 0.0, -VELOCITY_SWIM_DIAGONAL, swim},
+                        {0.0, 0.0, 0.0, static_cast<float>(Gaits::Sink)}};
             }
             }
             return {};
@@ -195,35 +216,8 @@ namespace my_namespace
         // Deconstructor
         ~MyCustomModel() {}
 
-        /// @brief Set the map bounds of the plan
-        void set_bounds(float min_x, float max_x, float min_y, float max_y, float min_z, float max_z)
-        {
-            x_bounds_ = {min_x, max_x};
-            y_bounds_ = {min_y, max_y};
-            z_bounds_ = {min_z, max_z};
-        }
-
-        /// @brief Set the goal threshold
-        void set_goal_threshold(float goal_threshold)
-        {
-            goal_threshold_ = goal_threshold;
-        }
-
-        void set_min_distance(const float min_distance)
-        {
-            min_distance_ = min_distance;
-        }
-
     protected:
         SDF3D sdf_;
-
-        std::array<float, 2> x_bounds_;
-        std::array<float, 2> y_bounds_;
-        std::array<float, 2> z_bounds_;
-        float goal_threshold_;
-        float cost_gait_switch_;
-        float cost_swim_;
-        float min_distance_;
     };
 
 }

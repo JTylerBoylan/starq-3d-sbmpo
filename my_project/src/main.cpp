@@ -13,7 +13,6 @@ int main(int argc, char **argv)
   sbmpo_benchmarks::Benchmark<MyCustomModel> benchmark("/sbmpo_ws/my_project/csv/");
 
   benchmark.model()->setSDF3D(sdf);
-  benchmark.model()->set_min_distance(0.25);
   benchmark.set_verbose(true);
   benchmark.set_dynamic_sampling(
       std::bind(&MyCustomModel::getControlSamples, benchmark.model(), std::placeholders::_1));

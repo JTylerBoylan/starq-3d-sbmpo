@@ -13,18 +13,20 @@ zlabel('Z')
 drawPier();
 drawDriftWood();
 
-view([-30 30])
-axis([0 15 0 15 0 7.5])
+view([-45 15])
+axis([0 15 0 15 0 15])
+axis off
+axis equal
 
-stats = sbmpo_stats("../csv/stats.csv");
-[paths, nodes] = sbmpo_results("../csv/nodes.csv");
+[dist_paths, dist_nodes] = sbmpo_results("mindist_nodes.csv");
+[energy_paths, energy_nodes] = sbmpo_results("minenergy_nodes.csv");
 
 goal_r = 1.0;
 start_state = [1; 8; 0];
 goal = [15; 8; 0];
 horizon_time = 0.1;
 
-t = 0.1:0.1:0.1*paths.path_size;
+t = 0.1:0.1:0.1*dist_paths.path_size;
 
 hold on
 
@@ -32,11 +34,11 @@ hold on
 plot3(goal(1), goal(2), goal(3));
 
 % Plot all nodes
-nx = zeros(1, nodes.buffer_size);
-ny = zeros(1, nodes.buffer_size);
-nz = zeros(1, nodes.buffer_size);
-for n = 1:nodes.buffer_size
-    node = nodes.nodes(n);
+nx = zeros(1, dist_nodes.buffer_size);
+ny = zeros(1, dist_nodes.buffer_size);
+nz = zeros(1, dist_nodes.buffer_size);
+for n = 1:dist_nodes.buffer_size
+    node = dist_nodes.nodes(n);
     nx(n) = node.state(1);
     ny(n) = node.state(2); 
     nz(n) = node.state(3);
@@ -44,22 +46,35 @@ end
 % plot3(nx, ny, nz, 'ob', 'MarkerSize', 2, 'HandleVisibility', 'off')
 
 % Plot path
-px = zeros(1, paths.path_size);
-py = zeros(1, paths.path_size);
-pz = zeros(1, paths.path_size);
-for n = 1:paths.path_size
-    node = paths.nodes(n);
-    px(n) = node.state(1);
-    py(n) = node.state(2);
-    pz(n) = node.state(3);
+dist_px = zeros(1, dist_paths.path_size);
+dist_py = zeros(1, dist_paths.path_size);
+dist_pz = zeros(1, dist_paths.path_size);
+for n = 1:dist_paths.path_size
+    node = dist_paths.nodes(n);
+    dist_px(n) = node.state(1);
+    dist_py(n) = node.state(2);
+    dist_pz(n) = node.state(3);
 end
-% plot3(px, py, pz, '--g', 'LineWidth', 2.5)
-% plot3(px, py, pz, 'ob', 'MarkerSize', 5)
+plot3(dist_px, dist_py, dist_pz, '--g', 'LineWidth', 2.5)
+plot3(dist_px, dist_py, dist_pz, 'ob', 'MarkerSize', 5)
+
+% Plot path
+energy_px = zeros(1, energy_paths.path_size);
+energy_py = zeros(1, energy_paths.path_size);
+energy_pz = zeros(1, energy_paths.path_size);
+for n = 1:energy_paths.path_size
+    node = energy_paths.nodes(n);
+    energy_px(n) = node.state(1);
+    energy_py(n) = node.state(2);
+    energy_pz(n) = node.state(3);
+end
+plot3(energy_px, energy_py, energy_pz, '--g', 'LineWidth', 2.5)
+plot3(energy_px, energy_py, energy_pz, 'ob', 'MarkerSize', 5)
 
 % calculate robot orientation
-dpx = diff(px);
-dpy = diff(py);
-dpz = diff(pz);
+dpx = diff(dist_px);
+dpy = diff(dist_py);
+dpz = diff(dist_pz);
 
 ppitch = atan2(dpz, sqrt(dpx.^2 + dpy.^2));
 pyaw = atan2(dpy, dpx);
@@ -75,16 +90,18 @@ robot_plt = drawRobot([], robot, 0, 0, z_off, 0, 0, 0);
 
 % animate
 tic
-plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
-for k = 2:paths.path_size
-    x_k = px(k);
-    y_k = py(k);
-    z_k = pz(k) + z_off;
+dist_plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
+energy_plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
+for k = 2:dist_paths.path_size
+    x_k = dist_px(k);
+    y_k = dist_py(k);
+    z_k = dist_pz(k) + z_off;
     roll_k = proll(k-1);
     pitch_k = ppitch(k-1);
     yaw_k = pyaw(k-1);
     robot_plt = drawRobot(robot_plt, robot, x_k, y_k, z_k, roll_k, pitch_k, yaw_k);
-    set(plt_line, 'xdata', px(1:k), 'ydata', py(1:k), 'zdata', pz(1:k))
+    %set(dist_plt_line, 'xdata', dist_px(1:k), 'ydata', dist_py(1:k), 'zdata', dist_pz(1:k))
+    %set(energy_plt_line, 'xdata', energy_px(1:k), 'ydata', energy_py(1:k), 'zdata', energy_pz(1:k))
     pause(t(k) - toc);
 end
 
@@ -162,11 +179,11 @@ scaledVertices_rail = [2 + 7.5 3.5 10] + scalingFactor * vertices_rail;
 hold on
 % Create a patch from the scaled vertices and original faces
 trisurf(faces_pier, scaledVertices_pier(:, 1), scaledVertices_pier(:, 2), scaledVertices_pier(:, 3), ...
-    'FaceColor', [100 100 100]/255, 'LineStyle', 'none', 'FaceAlpha', 0.5);
+    'FaceColor', [100 100 100]/255, 'LineStyle', 'none', 'FaceAlpha', 1.0);
 hold on
 % Create a patch from the scaled vertices and original faces
 trisurf(faces_rail, scaledVertices_rail(:, 1), scaledVertices_rail(:, 2), scaledVertices_rail(:, 3), ...
-    'FaceColor', [186 140 99]/255, 'LineStyle', 'none', 'FaceAlpha', 0.5);
+    'FaceColor', [186 140 99]/255, 'LineStyle', 'none', 'FaceAlpha', 1.0);
 
 end
 
