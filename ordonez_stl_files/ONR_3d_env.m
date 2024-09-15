@@ -7,9 +7,9 @@ close all
 
 
 % Define the dimensions of the box
-boxWidth = 20;
-boxLength = 20;
-boxHeight = 5;
+boxWidth = 5;
+boxLength = 5;
+boxHeight = 1;
 
 % Define the box vertices
 vertices = [
@@ -70,20 +70,20 @@ vertices_pier = pier.Points;
 faces_pier = pier.ConnectivityList;
 
 % Define a scaling factor to make the object smaller (e.g., 0.1 for 10% of original size)
-scalingFactor = 1;
+scalingFactor = 0.2;
 
 % Apply scaling to the vertices and translation
-scaledVertices_pier = [2+ 7.5 7.5 10] + scalingFactor * vertices_pier;
+scaledVertices_pier = [2.5 2.5 2] + scalingFactor * vertices_pier;
 
 
 rail = stlread(stlFile2);
 vertices_rail = rail.Points;
 faces_rail = rail.ConnectivityList;
 
-scalingFactor = 1;
+scalingFactor = 0.2;
 
 % Apply scaling to the vertices
-scaledVertices_rail = [2 + 7.5 3.5 10] + scalingFactor * vertices_rail;
+scaledVertices_rail = [2.5 2 2] + scalingFactor * vertices_rail;
 
 hold on
 % Create a patch from the scaled vertices and original faces
@@ -101,11 +101,11 @@ vertices_wood = wood.Points;
 faces_wood = wood.ConnectivityList;
 
 % Define a scaling factor to make the object smaller (e.g., 0.1 for 10% of original size)
-scalingFactor = 0.007; % original
+scalingFactor = 0.00225; % original
 % scalingFactor = 0.01;
 
 % Apply scaling to the vertices
-scaledVertices_wood = [10 5 -0.2] + scalingFactor * vertices_wood;
+scaledVertices_wood = [2.5 1.0 0.16875] + scalingFactor * vertices_wood;
 
 hold on
 % Create a patch from the scaled vertices and original faces
@@ -120,10 +120,10 @@ vertices_robot = robot.Points;
 faces_robot = robot.ConnectivityList;
 
 % Define a scaling factor to make the object smaller (e.g., 0.1 for 10% of original size)
-scalingFactor = 0.005/3;
+scalingFactor = 0.00225/3;
 
 % Apply scaling to the vertices
-scaledVertices_robot = [3 5 2] + scalingFactor * vertices_robot;
+scaledVertices_robot = [1 1 1] + scalingFactor * vertices_robot;
 
 hold on
 % Create a patch from the scaled vertices and original faces
@@ -169,12 +169,12 @@ Zp = pilar_points(:,3);
 
 % Add points to the pier mesh from the ground upto the water level
 
-xMin = 0; xMax = 20;
-yMin = 0; yMax = 20;
-zMin = 0; zMax = 5;
+xMin = 0; xMax = 5;
+yMin = 0; yMax = 5;
+zMin = 0; zMax = 1;
 min_coords = [xMin, yMin, zMin]; % Minimum coordinates
 max_coords = [xMax, yMax, zMax]; % Maximum coordinates
-resolution = 0.2; % Resolution (adjust as needed)
+resolution = 0.05; % Resolution (adjust as needed)
 
 % Create the 3D grid
 x = min_coords(1):resolution:max_coords(1);
@@ -188,7 +188,8 @@ occupancy_grid = zeros(size(X));
 % Set the voxels that intersect the object to 1
 % Append all points that correspond to osbtacles
 object_points = [Xp, Yp, Zp]; % pilar object points
-object_points = [object_points;scaledVertices_wood] % add drift wood
+object_points = [object_points;scaledVertices_wood]; % add drift wood
+% object_points = scaledVertices_wood; % add drift wood
 
 for i = 1:size(object_points, 1)
     % Check if the object point is within the grid

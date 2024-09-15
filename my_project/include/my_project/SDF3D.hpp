@@ -30,7 +30,7 @@ namespace my_namespace
             if (xidx < 0 || xidx >= sizeX_ ||
                 yidx < 0 || yidx >= sizeY_ ||
                 zidx < 0 || zidx >= sizeZ_)
-                return false;
+                return 0.0;
             const int idx = zidx * (sizeX_ * sizeY_) + yidx * sizeX_ + xidx;
             return grid_[idx];
         }
@@ -76,7 +76,7 @@ namespace my_namespace
 
            SDF3D grid(sizeX, sizeY, sizeZ, resX, resY, resZ);
 
-            int distval;
+            float distval;
             for (int zi = 0; zi < sizeZ; zi++)
             {
                 for (int yi = 0; yi < sizeY; yi++)
