@@ -103,8 +103,8 @@ namespace my_namespace
                 i.e Distance, Time, Energy
             */
 
-            return distance_cost(state1, state2, control, time_span);
-            // return energy_cost(state1, state2, control, time_span);
+            // return distance_cost(state1, state2, control, time_span);
+            return energy_cost(state1, state2, control, time_span);
         }
 
         // Get the cost of a control

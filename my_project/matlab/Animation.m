@@ -13,20 +13,20 @@ zlabel('Z')
 drawPier();
 drawDriftWood();
 
-view([-45 15])
-axis([0 15 0 15 0 15])
+view([145 15])
 axis off
 axis equal
 
 [dist_paths, dist_nodes] = sbmpo_results("mindist_nodes.csv");
 [energy_paths, energy_nodes] = sbmpo_results("minenergy_nodes.csv");
 
-goal_r = 1.0;
-start_state = [1; 8; 0];
-goal = [15; 8; 0];
-horizon_time = 0.1;
+goal_r = 0.25;
+start_state = [0.25; 2.5; 0];
+goal = [4.75; 2.5; 0];
+horizon_time = 2.0;
 
-t = 0.1:0.1:0.1*dist_paths.path_size;
+td = horizon_time:horizon_time:horizon_time*dist_paths.path_size;
+te = horizon_time:horizon_time:horizon_time*energy_paths.path_size;
 
 hold on
 
@@ -72,44 +72,86 @@ plot3(energy_px, energy_py, energy_pz, '--g', 'LineWidth', 2.5)
 plot3(energy_px, energy_py, energy_pz, 'ob', 'MarkerSize', 5)
 
 % calculate robot orientation
-dpx = diff(dist_px);
-dpy = diff(dist_py);
-dpz = diff(dist_pz);
+dpxd = diff(dist_px);
+dpyd = diff(dist_py);
+dpzd = diff(dist_pz);
 
-ppitch = atan2(dpz, sqrt(dpx.^2 + dpy.^2));
-pyaw = atan2(dpy, dpx);
-proll = pi/16 * sin(10 * t);
+ppitchd = atan2(dpzd, sqrt(dpxd.^2 + dpyd.^2));
+pyawd = atan2(dpyd, dpxd);
+prolld = pi/16 * sin(10 * td);
 
-ppitch = smoothdata(ppitch);
-pyaw = smoothdata(pyaw);
+ppitchd = smoothdata(ppitchd);
+pyawd = smoothdata(pyawd);
 
-z_off = 0.35;
+% calculate robot orientation
+dpxe = diff(energy_px);
+dpye = diff(energy_py);
+dpze = diff(energy_pz);
+
+ppitche = atan2(dpze, sqrt(dpxe.^2 + dpye.^2));
+pyawe = atan2(dpye, dpxe);
+prolle = pi/16 * sin(10 * te);
+
+ppitche = smoothdata(ppitche);
+pyawe = smoothdata(pyawe);
+
+z_off = 0.1;
 
 robot = stlread('stl/robot.stl');
-robot_plt = drawRobot([], robot, 0, 0, z_off, 0, 0, 0);
+robot_plt_dist = drawRobot([], robot, 0, 0, z_off, 0, 0, 0);
+robot_plt_energy = drawRobot([], robot, 0, 0, z_off, 0, 0, 0);
+
+% dist_plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
+% energy_plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
+
+if dist_paths.path_size < energy_paths.path_size
+    size = energy_paths.path_size;
+    t = te;
+else
+    size = dist_paths.path_size;
+    t = td;
+end
 
 % animate
 tic
-dist_plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
-energy_plt_line = plot3(0,0,0,'--g','LineWidth', 2.5);
-for k = 2:dist_paths.path_size
-    x_k = dist_px(k);
-    y_k = dist_py(k);
-    z_k = dist_pz(k) + z_off;
-    roll_k = proll(k-1);
-    pitch_k = ppitch(k-1);
-    yaw_k = pyaw(k-1);
-    robot_plt = drawRobot(robot_plt, robot, x_k, y_k, z_k, roll_k, pitch_k, yaw_k);
-    %set(dist_plt_line, 'xdata', dist_px(1:k), 'ydata', dist_py(1:k), 'zdata', dist_pz(1:k))
-    %set(energy_plt_line, 'xdata', energy_px(1:k), 'ydata', energy_py(1:k), 'zdata', energy_pz(1:k))
-    pause(t(k) - toc);
+vid = VideoWriter('animation.avi', 'Motion JPEG AVI');
+vid.FrameRate = 5;
+vid.Quality = 100;
+vid.open()
+pause(1.0)
+for k = 2:size
+    if (k <= dist_paths.path_size)
+        xd_k = dist_px(k);
+        yd_k = dist_py(k);
+        zd_k = dist_pz(k) + z_off;
+        roll_kd = prolld(k-1);
+        pitch_kd = ppitchd(k-1);
+        yaw_kd = pyawd(k-1);
+        robot_plt_dist = drawRobot(robot_plt_dist, robot, xd_k, yd_k, zd_k, roll_kd, pitch_kd, yaw_kd);
+        %set(dist_plt_line, 'xdata', dist_px(1:k), 'ydata', dist_py(1:k), 'zdata', dist_pz(1:k))
+    end
+
+    if (k <= energy_paths.path_size)
+        xe_k = energy_px(k);
+        ye_k = energy_py(k);
+        ze_k = energy_pz(k) + z_off;
+        roll_ke = prolle(k-1);
+        pitch_ke = ppitche(k-1);
+        yaw_ke = pyawe(k-1);
+        robot_plt_energy = drawRobot(robot_plt_energy, robot, xe_k, ye_k, ze_k, roll_ke, pitch_ke, yaw_ke);
+        %set(energy_plt_line, 'xdata', energy_px(1:k), 'ydata', energy_py(1:k), 'zdata', energy_pz(1:k))
+    end
+
+    writeVideo(vid, getframe(gcf))
+    % pause(t(k) - toc);
 end
+vid.close()
 
 function drawEnvironment()
 % Define the dimensions of the box
-boxWidth = 20;
-boxLength = 20;
-boxHeight = 5;
+boxWidth = 5;
+boxLength = 5;
+boxHeight = 1;
 
 % Define the box vertices
 vertices = [
@@ -162,19 +204,17 @@ vertices_pier = pier.Points;
 faces_pier = pier.ConnectivityList;
 
 % Define a scaling factor to make the object smaller (e.g., 0.1 for 10% of original size)
-scalingFactor = 1;
+scalingFactor = 0.2;
 
 % Apply scaling to the vertices and translation
-scaledVertices_pier = [2+ 7.5 7.5 10] + scalingFactor * vertices_pier;
+scaledVertices_pier = [2.5 2.5 2] + scalingFactor * vertices_pier;
 
 rail = stlread('stl/rail.stl');
 vertices_rail = rail.Points;
 faces_rail = rail.ConnectivityList;
 
-scalingFactor = 1;
-
 % Apply scaling to the vertices
-scaledVertices_rail = [2 + 7.5 3.5 10] + scalingFactor * vertices_rail;
+scaledVertices_rail = [2.5 2 2] + scalingFactor * vertices_rail;
 
 hold on
 % Create a patch from the scaled vertices and original faces
@@ -194,11 +234,11 @@ vertices_wood = wood.Points;
 faces_wood = wood.ConnectivityList;
 
 % Define a scaling factor to make the object smaller (e.g., 0.1 for 10% of original size)
-scalingFactor = 0.007; % original
+scalingFactor = 0.00225; % original
 % scalingFactor = 0.01;
 
 % Apply scaling to the vertices
-scaledVertices_wood = [10 5 -0.2] + scalingFactor * vertices_wood;
+scaledVertices_wood = [2.5 1.0 0.16875] + scalingFactor * vertices_wood;
 
 hold on
 % Create a patch from the scaled vertices and original faces
@@ -222,17 +262,17 @@ rotation_z = [cos(yaw), -sin(yaw), 0;
               sin(yaw), cos(yaw), 0;
               0, 0, 1];
 
-rotation_off = [0, 0, 1;
-                1, 0, 0;
-                0, 1, 0];
+ rotation_off = [0, 0, 1;
+                 1, 0, 0;
+                 0, 1, 0];
 
-rotation = rotation_off * rotation_z * rotation_y * rotation_x;
+rotation = rotation_z * rotation_y * rotation_x * rotation_off;
 
 vertices_robot = robot.Points;
 faces_robot = robot.ConnectivityList;
 
 % Define a scaling factor to make the object smaller (e.g., 0.1 for 10% of original size)
-scalingFactor = 0.005/3;
+scalingFactor = 0.00225/3;
 
 % Apply scaling to the vertices
 scaledVertices_robot = translation + scalingFactor * rotation * vertices_robot.';
