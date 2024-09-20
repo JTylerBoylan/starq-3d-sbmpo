@@ -55,8 +55,8 @@ for n = 1:dist_paths.path_size
     dist_py(n) = node.state(2);
     dist_pz(n) = node.state(3);
 end
-plot3(dist_px, dist_py, dist_pz, '--g', 'LineWidth', 2.5)
-plot3(dist_px, dist_py, dist_pz, 'ob', 'MarkerSize', 5)
+dist_plt_line = plot3(dist_px, dist_py, dist_pz, '--g', 'LineWidth', 2.5);
+dist_plt_mark = plot3(dist_px, dist_py, dist_pz, 'ob', 'MarkerSize', 5);
 
 % Plot path
 energy_px = zeros(1, energy_paths.path_size);
@@ -68,8 +68,8 @@ for n = 1:energy_paths.path_size
     energy_py(n) = node.state(2);
     energy_pz(n) = node.state(3);
 end
-plot3(energy_px, energy_py, energy_pz, '--g', 'LineWidth', 2.5)
-plot3(energy_px, energy_py, energy_pz, 'ob', 'MarkerSize', 5)
+energy_plt_line = plot3(energy_px, energy_py, energy_pz, '--g', 'LineWidth', 2.5);
+energy_plt_mark = plot3(energy_px, energy_py, energy_pz, 'ob', 'MarkerSize', 5);
 
 % calculate robot orientation
 dpxd = diff(dist_px);
